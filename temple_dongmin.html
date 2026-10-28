@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>템플런: 동민의 탈출 (vs 형규) - Temple Dongmin</title>
+  <!-- Three.js 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Malgun Gothic", sans-serif; user-select: none; }
+    
+    #gameContainer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas { display: block; outline: none; }
+
+    /* Danger Vignette & Fire Booster Glow */
+    #dangerOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(239, 68, 68, 0.85);
+      border: 8px solid rgba(239, 68, 68, 0.7);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    #boosterOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      box-shadow: inset 0 0 100px rgba(249, 115, 22, 0.85);
+      border: 8px solid rgba(249, 115, 22, 0.8);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    /* Screen Shake */
+    .shake-anim {
+      animation: screenShake 0.22s infinite;
+    }
+    @keyframes screenShake {
+      0%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-5px, 5px); }
+      40% { transform: translate(5px, -4px); }
+      60% { transform: translate(-4px, -3px); }
+      80% { transform: translate(4px, 4px); }
+    }
+
+    /* Elevated Name Tags */
+    #dongminNameTag {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: translate(-50%, -100%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 2px solid #38bdf8;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 4px 14px;
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 15;
+      box-shadow: 0 4px 18px rgba(56, 189, 248, 0.6);
+      white-space: nowrap;
+      display: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    #hyungkyuNameTag {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: translate(-50%, -100%);
+      background: rgba(127, 29, 29, 0.95);
+      border: 2px solid #ef4444;
+      color: #fee2e2;
+      font-size: 13px;
+      font-weight: 900;
+      padding: 4px 14px;
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 15;
+      box-shadow: 0 4px 18px rgba(239, 68, 68, 0.7);
+      white-space: nowrap;
+      display: none;
+    }
+
+    /* Top HUD */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .hud-card {
+      background: rgba(24, 20, 18, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 12px 18px;
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      pointer-events: auto;
+      backdrop-filter: blur(8px);
+    }
+
+    .score-timer {
+      font-size: 34px;
+      font-weight: 900;
+      color: #fbbf24;
+      font-family: monospace;
+      letter-spacing: -1px;
+    }
+
+    .best-badge {
+      font-size: 11px;
+      color: #a1a1aa;
+      margin-top: 4px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 4px;
+    }
+
+    /* Giant Mode Banner (Reduced to 3s) */
+    #giantBanner {
+      display: none;
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #ea580c, #f59e0b);
+      border: 2px solid #fef08a;
+      border-radius: 14px;
+      padding: 10px 24px;
+      color: #000;
+      font-weight: 900;
+      text-align: center;
+      z-index: 25;
+      box-shadow: 0 10px 30px rgba(245, 158, 11, 0.6);
+      animation: alertPulse 0.7s infinite;
+    }
+    @keyframes alertPulse {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* Warning Banner */
+    #warningBanner {
+      display: none;
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(120, 10, 10, 0.92);
+      border: 2px solid #ef4444;
+      border-radius: 14px;
+      padding: 10px 20px;
+      color: #fff;
+      text-align: center;
+      z-index: 25;
+      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.5);
+      animation: alertPulse 0.7s infinite;
+    }
+
+    /* Modal Windows */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: #181411;
+      border: 2px solid #f59e0b;
+      border-radius: 24px;
+      padding: 24px;
+      max-width: 410px;
+      width: 100%;
+      text-align: center;
+      color: #fff;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .btn-main {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 16px;
+      border: none;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: #000;
+      font-size: 16px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
+      transition: transform 0.1s;
+      margin-top: 16px;
+    }
+    .btn-main:active { transform: scale(0.97); }
+
+    .btn-restart {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+    }
+
+    /* Bottom Control Bar */
+    .bottom-bar {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 12, 10, 0.88);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 30px;
+      padding: 8px 20px;
+      color: #ccc;
+      font-size: 12px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      z-index: 20;
+    }
+
+    .key-badge {
+      background: #27272a;
+      border: 1px solid #52525b;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-weight: bold;
+      color: #fbbf24;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas Container -->
+  <div id="gameContainer"></div>
+
+  <!-- Dynamic 3D Follow Name Tags -->
+  <div id="dongminNameTag">🏃 동민 (하얀 덩치)</div>
+  <div id="hyungkyuNameTag">🐺 괴물 형규</div>
+
+  <!-- Screen Overlays -->
+  <div id="dangerOverlay"></div>
+  <div id="boosterOverlay"></div>
+
+  <!-- Giant Mode Active Banner (3s Countdown) -->
+  <div id="giantBanner">
+    <div style="font-size: 16px;">🔥 거인화 & 불꽃 부스터 가동! 🔥</div>
+    <div style="font-size: 12px; font-weight: normal; margin-top: 3px;">
+      +10km 돌파! 부엉이 바위를 부수며 돌진! (남은 무적 시간: <b id="giantSec" style="color:#000; background:#fef08a; padding:1px 6px; border-radius:4px;">3.0초</b>)
+    </div>
+  </div>
+
+  <!-- Chasing Warning Banner -->
+  <div id="warningBanner">
+    <div style="font-size: 15px; font-weight: 900; color: #f87171;">🐺 형규가 턱밑 0.5m까지 따라붙었습니다!! ⚠️</div>
+    <div style="font-size: 12px; margin-top: 2px;">바위에 2번 연속 걸리면 사망! <b id="recoverSec" style="color:#fbbf24;">5.0초</b> 버티세요!</div>
+  </div>
+
+  <!-- HUD -->
+  <div class="hud-layer">
+    <div class="hud-card">
+      <div style="font-size: 11px; color: #a1a1aa; font-weight: bold; text-transform: uppercase;">생존 시간 (SCORE)</div>
+      <div class="score-timer" id="timerText">0.00<span style="font-size:16px; color:#888;">초</span></div>
+      <div class="best-badge">
+        <span>거리: <b id="distText" style="color:#34d399;">0.00 km</b></span> | 
+        <span>최고: <b id="bestText" style="color:#fff;">0.00초</b></span>
+      </div>
+    </div>
+
+    <div class="hud-card" style="text-align: right;">
+      <div style="font-size: 12px; font-weight: bold;">
+        <span>🧑🏻 동민</span> <span style="color:#ef4444;">VS</span> <span>🐺 괴물 형규</span>
+      </div>
+      <div id="speedBadge" style="font-size: 13px; font-family: monospace; color:#fbbf24; font-weight: bold; margin-top: 4px;">
+        속도: 42 km/h
+      </div>
+      <button onclick="toggleCam()" style="pointer-events:auto; margin-top:6px; background:#27272a; border:1px solid #52525b; color:#fff; border-radius:8px; padding:3px 10px; font-size:11px; cursor:pointer;">
+        시점 전환 [C]
+      </button>
+    </div>
+  </div>
+
+  <!-- Controls Guide -->
+  <div class="bottom-bar">
+    <span><span class="key-badge">←</span> <span class="key-badge">→</span> 좌우 이동</span>
+    <span>|</span>
+    <span><span class="key-badge">SPACE</span> 바위 점프</span>
+    <span>|</span>
+    <span><span class="key-badge">🔥</span> 불꽃 부스터 (3초간 거인 무적)</span>
+  </div>
+
+  <!-- Start Modal -->
+  <div id="startModal" class="modal-backdrop">
+    <div class="modal-box">
+      <div style="font-size: 48px; margin-bottom: 8px;">🏃💨</div>
+      <h1 style="font-size: 26px; font-weight: 900; color: #fbbf24; margin-bottom: 4px;">동민의 사원 탈출</h1>
+      <p style="font-size: 12px; color: #a1a1aa; margin-bottom: 16px;">부엉이 바위를 피해 맹수 형규로부터 살아남아라!</p>
+      
+      <div style="background:#110e0c; border:1px solid #2d241e; border-radius:16px; padding:14px; text-align:left; font-size:12px; line-height:1.7; color:#ddd;">
+        <div>🧑🏻 <b>동민:</b> 머리 위에 선명한 이름표가 달린 하얀 덩치 주인공</div>
+        <div>🐺 <b>괴물 형규:</b> 거대해진 몸집과 붉은 눈으로 뒤에서 맹추격하는 괴물</div>
+        <div>⌨️ <b>좌우 조작:</b> <b style="color:#38bdf8;">← / → (A / D)</b> 키로 좌우 레인 변경!</div>
+        <div>🦉 <b>불규칙 바위:</b> 여러 레인에 불규칙 출현, <b style="color:#fbbf24;">SPACE</b>로 점프!</div>
+        <div>🔥 <b>불꽃 부스터:</b> <b style="color:#f59e0b;">+10km 급가속</b> & <b style="color:#fff;">거인화 무적!</b> (정확히 3초간 지속 후 초기화)</div>
+      </div>
+
+      <button id="btnStart" class="btn-main" onclick="startGame()">
+        게임 시작하기 (또는 SPACE 키) 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="gameOverModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-box" style="border-color: #ef4444;">
+      <div style="font-size: 48px; margin-bottom: 8px;">💀</div>
+      <h2 style="font-size: 26px; font-weight: 900; color: #ef4444; margin-bottom: 4px;">동민이 잡혔습니다!</h2>
+      <p style="font-size: 12px; color: #a1a1aa; margin-bottom: 16px;">괴물 형규의 이빨을 피하지 못했습니다.</p>
+      
+      <div style="background:#110e0c; border:1px solid #2d241e; border-radius:16px; padding:16px; text-align:center;">
+        <div style="font-size: 11px; color: #a1a1aa;">이번 생존 시간</div>
+        <div id="finalScore" style="font-size: 34px; font-weight: 900; color: #fbbf24; font-family: monospace; margin: 4px 0 8px;">0.00초</div>
+        
+        <div style="display:flex; justify-content:space-between; font-size:12px; border-top:1px solid #222; padding-top:8px; color:#aaa;">
+          <span>총 이동 거리:</span> <b id="finalDist" style="color:#34d399;">0.00 km</b>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px; color:#aaa;">
+          <span>역대 최고 생존:</span> <b id="finalBest" style="color:#fff;">0.00초</b>
+        </div>
+      </div>
+
+      <button id="btnRestart" class="btn-main btn-restart" onclick="restartGame()">
+        다시 도전하기 (또는 SPACE 키) 🔄
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Web Audio Synthesizer
+    let audioCtx = null;
+    function getAudio() {
+      if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){}
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playBeep(freq, dur, type='sine', gain=0.15) {
+      const actx = getAudio();
+      if (!actx) return;
+      try {
+        const osc = actx.createOscillator();
+        const g = actx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, actx.currentTime);
+        g.gain.setValueAtTime(gain, actx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+        osc.connect(g);
+        g.connect(actx.destination);
+        osc.start();
+        osc.stop(actx.currentTime + dur);
+      } catch(e){}
+    }
+
+    function soundJump() {
+      playBeep(260, 0.15, 'triangle', 0.2);
+      setTimeout(() => playBeep(420, 0.2, 'sine', 0.15), 50);
+    }
+    function soundMove() { playBeep(200, 0.08, 'triangle', 0.12); }
+    function soundHit() { playBeep(110, 0.4, 'sawtooth', 0.4); }
+    function soundBooster() {
+      playBeep(350, 0.15, 'sawtooth', 0.3);
+      setTimeout(() => playBeep(550, 0.25, 'square', 0.35), 100);
+      setTimeout(() => playBeep(850, 0.4, 'sine', 0.35), 220);
+    }
+    function soundSmash() { playBeep(140, 0.25, 'sawtooth', 0.35); }
+    function soundGrowl() {
+      playBeep(85, 0.7, 'sawtooth', 0.3);
+      setTimeout(() => playBeep(65, 0.6, 'square', 0.25), 180);
+    }
+    function soundHeartbeat() {
+      playBeep(65, 0.12, 'sine', 0.45);
+      setTimeout(() => playBeep(55, 0.18, 'sine', 0.35), 160);
+    }
+    function soundOver() {
+      playBeep(180, 0.3, 'sawtooth', 0.3);
+      setTimeout(() => playBeep(120, 0.4, 'sawtooth', 0.3), 200);
+      setTimeout(() => playBeep(70, 0.8, 'square', 0.4), 450);
+    }
+
+    // Game Core State
+    let isPlaying = false;
+    let startTime = 0;
+    let survivalTime = 0;
+    let totalDistKm = 0;
+    let bestScore = parseFloat(localStorage.getItem('temple_dongmin_best') || "0.00");
+    document.getElementById('bestText').textContent = bestScore.toFixed(2) + "초";
+
+    let strikes = 0;
+    let recoverTimer = 0;
+    let heartbeatTimer = null;
+    let gameSpeed = 42;
+
+    // 3 Lanes: -2.3, 0.0, 2.3
+    const lanes = [-2.3, 0.0, 2.3];
+    let currentLaneIndex = 1; // Middle
+    let targetX = 0.0;
+
+    // Jump Physics
+    let isJumping = false;
+    let jumpVel = 0;
+    const gravity = -36;
+    const jumpPower = 14.8;
+
+    // Giant & Invincible Mode (Reduced to 3.0 seconds!)
+    let isInvincible = false;
+    let invincibleTimer = 0;
+
+    // Three.js Objects
+    let scene, camera, renderer;
+    let dongminGroup, hyungkyuGroup;
+    let obstacles = [];
+    let items = [];
+    let trackTiles = [];
+    let trackColumns = [];
+
+    // Camera Modes (C Key)
+    const cameraModes = [
+      { name: "3인칭 백뷰", offset: new THREE.Vector3(0, 4.2, 8.5), lookAt: new THREE.Vector3(0, 1.8, -4) },
+      { name: "다이내믹 숄더뷰", offset: new THREE.Vector3(1.3, 2.8, 5.0), lookAt: new THREE.Vector3(0, 1.6, -6) },
+      { name: "2.5D 사이드뷰", offset: new THREE.Vector3(9.0, 3.4, 0), lookAt: new THREE.Vector3(0, 1.5, 0) },
+      { name: "탑다운 쿼터뷰", offset: new THREE.Vector3(0, 13, 11), lookAt: new THREE.Vector3(0, 1, -2) }
+    ];
+    let camIndex = 0;
+
+    function toggleCam() {
+      camIndex = (camIndex + 1) % cameraModes.length;
+    }
+
+    // Name Tag 3D-to-2D Coordinate Projection (Higher offset for Dongmin!)
+    const tempVec = new THREE.Vector3();
+    function updateNameTags() {
+      const tagD = document.getElementById('dongminNameTag');
+      const tagH = document.getElementById('hyungkyuNameTag');
+
+      if (!isPlaying) {
+        tagD.style.display = 'none';
+        tagH.style.display = 'none';
+        return;
+      }
+
+      // 1. Dongmin Name Tag (Positioned significantly higher above head!)
+      tempVec.setFromMatrixPosition(dongminGroup.matrixWorld);
+      const headHeight = isInvincible ? 8.2 : 4.4; // Elevated higher!
+      tempVec.y += headHeight;
+      tempVec.project(camera);
+
+      if (tempVec.z < 1) {
+        const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
+        const y = -(tempVec.y * 0.5 - 0.5) * window.innerHeight;
+        tagD.style.left = `${x}px`;
+        tagD.style.top = `${y}px`;
+        tagD.style.display = 'block';
+
+        if (isInvincible) {
+          tagD.style.borderColor = '#f59e0b';
+          tagD.style.background = 'rgba(234, 88, 12, 0.95)';
+          tagD.innerHTML = '🔥 거인 동민 (무적)';
+        } else {
+          tagD.style.borderColor = '#38bdf8';
+          tagD.style.background = 'rgba(15, 23, 42, 0.95)';
+          tagD.innerHTML = '🏃 동민 (하얀 덩치)';
+        }
+      } else {
+        tagD.style.display = 'none';
+      }
+
+      // 2. Hyung-kyu Name Tag (Positioned prominently above beast head)
+      tempVec.setFromMatrixPosition(hyungkyuGroup.matrixWorld);
+      tempVec.y += 3.4; // Elevated clearly
+      tempVec.project(camera);
+
+      if (tempVec.z < 1) {
+        const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
+        const y = -(tempVec.y * 0.5 - 0.5) * window.innerHeight;
+        tagH.style.left = `${x}px`;
+        tagH.style.top = `${y}px`;
+        tagH.style.display = 'block';
+      } else {
+        tagH.style.display = 'none';
+      }
+    }
+
+    // Three.js Initialization
+    function init3D() {
+      const container = document.getElementById('gameContainer');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f0b08);
+      scene.fog = new THREE.FogExp2(0x0f0b08, 0.02);
+
+      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 160);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      const ambient = new THREE.AmbientLight(0xffeedd, 0.7);
+      scene.add(ambient);
+
+      const dirLight = new THREE.DirectionalLight(0xffb066, 1.5);
+      dirLight.position.set(12, 25, 15);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      createTempleTrack();
+
+      dongminGroup = createDongmin();
+      scene.add(dongminGroup);
+
+      hyungkyuGroup = createHyungkyu();
+      scene.add(hyungkyuGroup);
+
+      window.addEventListener('resize', onResize);
+      window.addEventListener('keydown', handleInput);
+    }
+
+    function createTempleTrack() {
+      const tileGeo = new THREE.BoxGeometry(8, 0.6, 20);
+      const mat1 = new THREE.MeshLambertMaterial({ color: 0x3d3027 });
+      const mat2 = new THREE.MeshLambertMaterial({ color: 0x4a3b30 });
+
+      for (let i = 0; i < 8; i++) {
+        const tile = new THREE.Mesh(tileGeo, i % 2 === 0 ? mat1 : mat2);
+        tile.position.set(0, -0.3, -i * 20 + 20);
+        tile.receiveShadow = true;
+        scene.add(tile);
+        trackTiles.push(tile);
+      }
+
+      const colGeo = new THREE.CylinderGeometry(0.5, 0.6, 7, 8);
+      const colMat = new THREE.MeshLambertMaterial({ color: 0x241d18 });
+
+      for (let i = 0; i < 16; i++) {
+        const lCol = new THREE.Mesh(colGeo, colMat);
+        lCol.position.set(-4.6, 3.5, -i * 10 + 20);
+        lCol.castShadow = true;
+        scene.add(lCol);
+        trackColumns.push(lCol);
+
+        const rCol = new THREE.Mesh(colGeo, colMat);
+        rCol.position.set(4.6, 3.5, -i * 10 + 20);
+        rCol.castShadow = true;
+        scene.add(rCol);
+        trackColumns.push(rCol);
+      }
+    }
+
+    // 주인공 동민 (하얗고 덩치 큰 건장한 동양인 청년)
+    function createDongmin() {
+      const group = new THREE.Group();
+
+      const skinMat = new THREE.MeshLambertMaterial({ color: 0xf5dfd0 });
+      const shirtMat = new THREE.MeshLambertMaterial({ color: 0x22c55e });
+      const pantsMat = new THREE.MeshLambertMaterial({ color: 0x1f2937 });
+      const hairMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.35, 0.75), shirtMat);
+      torso.position.y = 1.65;
+      torso.castShadow = true;
+      group.add(torso);
+
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.72, 0.72), skinMat);
+      head.position.set(0, 2.58, 0);
+      head.castShadow = true;
+      group.add(head);
+
+      const hair = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.26, 0.74), hairMat);
+      hair.position.set(0, 2.92, 0);
+      group.add(hair);
+
+      const armGeo = new THREE.BoxGeometry(0.36, 1.05, 0.36);
+      const leftArm = new THREE.Mesh(armGeo, skinMat);
+      leftArm.position.set(-0.78, 1.6, 0);
+      leftArm.castShadow = true;
+      group.add(leftArm);
+      group.leftArm = leftArm;
+
+      const rightArm = new THREE.Mesh(armGeo, skinMat);
+      rightArm.position.set(0.78, 1.6, 0);
+      rightArm.castShadow = true;
+      group.add(rightArm);
+      group.rightArm = rightArm;
+
+      const legGeo = new THREE.BoxGeometry(0.44, 1.15, 0.44);
+      const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+      leftLeg.position.set(-0.36, 0.65, 0);
+      leftLeg.castShadow = true;
+      group.add(leftLeg);
+      group.leftLeg = leftLeg;
+
+      const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+      rightLeg.position.set(0.36, 0.65, 0);
+      rightLeg.castShadow = true;
+      group.add(rightLeg);
+      group.rightLeg = rightLeg;
+
+      group.position.set(0, 0, 0);
+      return group;
+    }
+
+    // 추격자 형규 (몸집과 시인성을 대폭 강화한 그레이하운드 괴물)
+    function createHyungkyu() {
+      const group = new THREE.Group();
+
+      const beastMat = new THREE.MeshLambertMaterial({ color: 0x1f1f23 });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const teethMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const spikeMat = new THREE.MeshLambertMaterial({ color: 0x7f1d1d }); // 사나운 척추 뿔
+
+      // Larger, more menacing body (1.35x enlarged)
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.25, 2.8), beastMat);
+      body.position.y = 1.45;
+      body.castShadow = true;
+      group.add(body);
+
+      // Menacing Spikes along spine
+      for (let i = -1.0; i <= 1.0; i += 0.5) {
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.45, 4), spikeMat);
+        spike.position.set(0, 2.2, i);
+        group.add(spike);
+      }
+
+      // Snout & Head
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.8, 1.45), beastMat);
+      head.position.set(0, 1.95, -1.45);
+      head.castShadow = true;
+      group.add(head);
+
+      // Huge Glowing Red Eyes (Very visible!)
+      const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.2), eyeMat);
+      leftEye.position.set(-0.32, 2.15, -1.75);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.16, 0.2), eyeMat);
+      rightEye.position.set(0.32, 2.15, -1.75);
+      group.add(rightEye);
+
+      // Huge Jaws & Fangs
+      const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 1.0), teethMat);
+      jaw.position.set(0, 1.6, -1.9);
+      group.add(jaw);
+
+      // Muscular, Longer Greyhound Legs
+      const legGeo = new THREE.BoxGeometry(0.34, 1.45, 0.34);
+      const flLeg = new THREE.Mesh(legGeo, beastMat);
+      flLeg.position.set(-0.5, 0.72, -0.85);
+      flLeg.castShadow = true;
+      group.add(flLeg);
+      group.flLeg = flLeg;
+
+      const frLeg = new THREE.Mesh(legGeo, beastMat);
+      frLeg.position.set(0.5, 0.72, -0.85);
+      frLeg.castShadow = true;
+      group.add(frLeg);
+      group.frLeg = frLeg;
+
+      const blLeg = new THREE.Mesh(legGeo, beastMat);
+      blLeg.position.set(-0.5, 0.72, 0.85);
+      blLeg.castShadow = true;
+      group.add(blLeg);
+      group.blLeg = blLeg;
+
+      const brLeg = new THREE.Mesh(legGeo, beastMat);
+      brLeg.position.set(0.5, 0.72, 0.85);
+      brLeg.castShadow = true;
+      group.add(brLeg);
+      group.brLeg = brLeg;
+
+      // Positioned closer so Hyung-kyu is clearly visible in the chase camera!
+      group.targetZ = 3.8;
+      group.position.set(0, 0, 3.8);
+      return group;
+    }
+
+    // 부엉이 모양 바위 (Owl-Shaped Rock Obstacle)
+    function createOwlRock(xPos, zPos) {
+      const group = new THREE.Group();
+
+      const stoneMat = new THREE.MeshLambertMaterial({ color: 0x57534e });
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+      const beakMat = new THREE.MeshLambertMaterial({ color: 0xd97706 });
+
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.3, 1.5, 8), stoneMat);
+      body.position.y = 0.75;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      group.add(body);
+
+      const earGeo = new THREE.ConeGeometry(0.45, 0.65, 4);
+      const leftEar = new THREE.Mesh(earGeo, stoneMat);
+      leftEar.position.set(-0.55, 1.65, 0);
+      leftEar.rotation.z = -0.2;
+      group.add(leftEar);
+
+      const rightEar = new THREE.Mesh(earGeo, stoneMat);
+      rightEar.position.set(0.55, 1.65, 0);
+      rightEar.rotation.z = 0.2;
+      group.add(rightEar);
+
+      const eyeGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.15, 8);
+      eyeGeo.rotateX(Math.PI / 2);
+      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+      leftEye.position.set(-0.4, 1.05, 0.85);
+      group.add(leftEye);
+
+      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+      rightEye.position.set(0.4, 1.05, 0.85);
+      group.add(rightEye);
+
+      const beakGeo = new THREE.ConeGeometry(0.18, 0.38, 4);
+      beakGeo.rotateX(-Math.PI / 2);
+      const beak = new THREE.Mesh(beakGeo, beakMat);
+      beak.position.set(0, 0.8, 1.05);
+      group.add(beak);
+
+      group.position.set(xPos, 0, zPos);
+      group.collided = false;
+
+      scene.add(group);
+      obstacles.push(group);
+    }
+
+    // 불꽃 부스터 아이템 구체 (Fire Booster Item Orb)
+    function createFireItem(xPos, zPos) {
+      const group = new THREE.Group();
+
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+      const outerMat = new THREE.MeshBasicMaterial({ color: 0xff3300, wireframe: true });
+
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 12), coreMat);
+      core.position.y = 1.3;
+      group.add(core);
+
+      const outer = new THREE.Mesh(new THREE.OctahedronGeometry(0.85, 0), outerMat);
+      outer.position.y = 1.3;
+      group.add(outer);
+      group.outer = outer;
+
+      group.position.set(xPos, 0, zPos);
+      group.collected = false;
+
+      scene.add(group);
+      items.push(group);
+    }
+
+    // Irregular Wave Spawner
+    function spawnIrregularOwlRocks(baseZ) {
+      const pattern = Math.random();
+
+      if (Math.random() < 0.28) {
+        const itemLane = lanes[Math.floor(Math.random() * lanes.length)];
+        createFireItem(itemLane, baseZ - 12);
+      }
+
+      if (pattern < 0.4) {
+        const l1 = lanes[Math.floor(Math.random() * lanes.length)];
+        createOwlRock(l1, baseZ);
+      } else if (pattern < 0.75) {
+        const openIdx = Math.floor(Math.random() * lanes.length);
+        for (let i = 0; i < lanes.length; i++) {
+          if (i !== openIdx) {
+            createOwlRock(lanes[i], baseZ);
+          }
+        }
+      } else {
+        createOwlRock(lanes[0], baseZ);
+        createOwlRock(lanes[2], baseZ - 18);
+      }
+    }
+
+    // Input Handling
+    function handleInput(e) {
+      if (!isPlaying) {
+        if (e.code === 'Space' || e.code === 'Enter') {
+          e.preventDefault();
+          const startM = document.getElementById('startModal');
+          const overM = document.getElementById('gameOverModal');
+          if (startM.style.display !== 'none') startGame();
+          else if (overM.style.display !== 'none') restartGame();
+        }
+        return;
+      }
+
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+        e.preventDefault();
+        moveLane(-1);
+      } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+        e.preventDefault();
+        moveLane(1);
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        triggerJump();
+      } else if (e.code === 'KeyC' || e.code === 'KeyV') {
+        e.preventDefault();
+        toggleCam();
+      }
+    }
+
+    function moveLane(dir) {
+      const newIdx = currentLaneIndex + dir;
+      if (newIdx >= 0 && newIdx < lanes.length) {
+        currentLaneIndex = newIdx;
+        targetX = lanes[currentLaneIndex];
+        soundMove();
+      }
+    }
+
+    function triggerJump() {
+      if (!isPlaying || isJumping) return;
+      isJumping = true;
+      jumpVel = jumpPower;
+      soundJump();
+    }
+
+    // 아이템 지속 시간을 3초로 단축!
+    function activateFlameBooster() {
+      soundBooster();
+      isInvincible = true;
+      invincibleTimer = 3.0; // 3.0초 지속!
+
+      totalDistKm += 10.0;
+      dongminGroup.scale.set(2.2, 2.2, 2.2);
+      hyungkyuGroup.targetZ = 8.5; // 형규 후퇴
+
+      strikes = 0;
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      document.getElementById('dangerOverlay').style.opacity = '0';
+      document.getElementById('warningBanner').style.display = 'none';
+      document.getElementById('gameContainer').classList.remove('shake-anim');
+
+      document.getElementById('boosterOverlay').style.opacity = '1';
+      document.getElementById('giantBanner').style.display = 'block';
+    }
+
+    function deactivateFlameBooster() {
+      isInvincible = false;
+      invincibleTimer = 0;
+      dongminGroup.scale.set(1.0, 1.0, 1.0);
+      hyungkyuGroup.targetZ = 3.8; // 형규 원래 추격 거리로 복귀
+
+      document.getElementById('boosterOverlay').style.opacity = '0';
+      document.getElementById('giantBanner').style.display = 'none';
+    }
+
+    function takeHit() {
+      if (isInvincible) return;
+
+      strikes++;
+      soundHit();
+
+      if (strikes >= 2) {
+        hyungkyuGroup.targetZ = 0.4;
+        gameOver();
+      } else {
+        soundGrowl();
+        hyungkyuGroup.targetZ = 1.35; // 0.5m 코앞 바짝 추격!
+        recoverTimer = 5.0;
+
+        document.getElementById('dangerOverlay').style.opacity = '1';
+        document.getElementById('warningBanner').style.display = 'block';
+        document.getElementById('gameContainer').classList.add('shake-anim');
+
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        heartbeatTimer = setInterval(soundHeartbeat, 750);
+        soundHeartbeat();
+      }
+    }
+
+    function startGame() {
+      getAudio();
+      document.getElementById('startModal').style.display = 'none';
+      document.getElementById('gameOverModal').style.display = 'none';
+      document.getElementById('warningBanner').style.display = 'none';
+      document.getElementById('giantBanner').style.display = 'none';
+      document.getElementById('dangerOverlay').style.opacity = '0';
+      document.getElementById('boosterOverlay').style.opacity = '0';
+      document.getElementById('gameContainer').classList.remove('shake-anim');
+
+      isPlaying = true;
+      startTime = performance.now();
+      survivalTime = 0;
+      totalDistKm = 0;
+      strikes = 0;
+      recoverTimer = 0;
+      gameSpeed = 42;
+
+      currentLaneIndex = 1;
+      targetX = lanes[currentLaneIndex];
+      dongminGroup.position.set(targetX, 0, 0);
+
+      isInvincible = false;
+      invincibleTimer = 0;
+      dongminGroup.scale.set(1.0, 1.0, 1.0);
+
+      isJumping = false;
+      jumpVel = 0;
+
+      hyungkyuGroup.targetZ = 3.8;
+      hyungkyuGroup.position.set(0, 0, 3.8);
+
+      obstacles.forEach(o => scene.remove(o));
+      obstacles = [];
+
+      items.forEach(it => scene.remove(it));
+      items = [];
+
+      spawnIrregularOwlRocks(-35);
+      spawnIrregularOwlRocks(-70);
+      spawnIrregularOwlRocks(-105);
+
+      soundGrowl();
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    function gameOver() {
+      isPlaying = false;
+      soundOver();
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+
+      document.getElementById('warningBanner').style.display = 'none';
+      document.getElementById('giantBanner').style.display = 'none';
+      document.getElementById('gameContainer').classList.remove('shake-anim');
+
+      const finalSec = survivalTime.toFixed(2);
+      if (survivalTime > bestScore) {
+        bestScore = survivalTime;
+        localStorage.setItem('temple_dongmin_best', bestScore.toString());
+      }
+
+      document.getElementById('bestText').textContent = bestScore.toFixed(2) + "초";
+      document.getElementById('finalScore').textContent = finalSec + "초";
+      document.getElementById('finalDist').textContent = totalDistKm.toFixed(2) + " km";
+      document.getElementById('finalBest').textContent = bestScore.toFixed(2) + "초";
+
+      document.getElementById('gameOverModal').style.display = 'flex';
+      updateNameTags();
+    }
+
+    // Main Game Loop
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      if (isPlaying) {
+        survivalTime = (now - startTime) / 1000;
+        document.getElementById('timerText').innerHTML = `${survivalTime.toFixed(2)}<span style="font-size:16px; color:#888;">초</span>`;
+
+        const baseSpeed = 42 + survivalTime * 1.25;
+        gameSpeed = isInvincible ? (baseSpeed + 45) : baseSpeed;
+
+        totalDistKm += (gameSpeed * delta) / 3600;
+        document.getElementById('distText').textContent = `${totalDistKm.toFixed(2)} km`;
+        document.getElementById('speedBadge').textContent = `속도: ${Math.round(gameSpeed)} km/h`;
+
+        // Smooth Lane Shift
+        dongminGroup.position.x += (targetX - dongminGroup.position.x) * delta * 15;
+        hyungkyuGroup.position.x += (dongminGroup.position.x - hyungkyuGroup.position.x) * delta * 10;
+
+        // 3초 카운트다운 타이머
+        if (isInvincible) {
+          invincibleTimer -= delta;
+          document.getElementById('giantSec').textContent = `${Math.max(0, invincibleTimer).toFixed(1)}초`;
+          if (invincibleTimer <= 0) {
+            deactivateFlameBooster(); // 3초 뒤 초기화!
+          }
+        }
+
+        // Chased Recover Timer
+        if (strikes === 1 && !isInvincible) {
+          recoverTimer -= delta;
+          document.getElementById('recoverSec').textContent = `${Math.max(0, recoverTimer).toFixed(1)}초`;
+          if (recoverTimer <= 0) {
+            strikes = 0;
+            hyungkyuGroup.targetZ = 3.8;
+            document.getElementById('dangerOverlay').style.opacity = '0';
+            document.getElementById('warningBanner').style.display = 'none';
+            document.getElementById('gameContainer').classList.remove('shake-anim');
+            if (heartbeatTimer) clearInterval(heartbeatTimer);
+          }
+        }
+
+        // Jump Physics
+        if (isJumping) {
+          dongminGroup.position.y += jumpVel * delta;
+          jumpVel += gravity * delta;
+
+          if (dongminGroup.position.y <= 0) {
+            dongminGroup.position.y = 0;
+            isJumping = false;
+            jumpVel = 0;
+          }
+        }
+
+        // Dongmin Running Animations
+        const runCycle = now * 0.018;
+        if (!isJumping) {
+          dongminGroup.leftArm.rotation.x = Math.sin(runCycle) * 0.85;
+          dongminGroup.rightArm.rotation.x = -Math.sin(runCycle) * 0.85;
+          dongminGroup.leftLeg.rotation.x = -Math.sin(runCycle) * 0.95;
+          dongminGroup.rightLeg.rotation.x = Math.sin(runCycle) * 0.95;
+        } else {
+          dongminGroup.leftLeg.rotation.x = -0.5;
+          dongminGroup.rightLeg.rotation.x = 0.5;
+          dongminGroup.leftArm.rotation.x = -1.3;
+          dongminGroup.rightArm.rotation.x = -1.3;
+        }
+
+        // Hyung-kyu Gallop Animation
+        const houndCycle = now * (strikes === 1 ? 0.04 : 0.026);
+        hyungkyuGroup.flLeg.rotation.x = Math.sin(houndCycle) * 1.1;
+        hyungkyuGroup.frLeg.rotation.x = -Math.sin(houndCycle) * 1.1;
+        hyungkyuGroup.blLeg.rotation.x = -Math.sin(houndCycle + 0.5) * 1.1;
+        hyungkyuGroup.brLeg.rotation.x = Math.sin(houndCycle + 0.5) * 1.1;
+
+        hyungkyuGroup.position.z += (hyungkyuGroup.targetZ - hyungkyuGroup.position.z) * delta * 5;
+
+        // Track Movement
+        trackTiles.forEach(tile => {
+          tile.position.z += gameSpeed * delta;
+          if (tile.position.z > 30) tile.position.z -= 160;
+        });
+
+        trackColumns.forEach(col => {
+          col.position.z += gameSpeed * delta;
+          if (col.position.z > 30) col.position.z -= 160;
+        });
+
+        // Items Handling
+        for (let i = items.length - 1; i >= 0; i--) {
+          const item = items[i];
+          item.position.z += gameSpeed * delta;
+          if (item.outer) {
+            item.outer.rotation.x += delta * 3;
+            item.outer.rotation.y += delta * 4;
+          }
+
+          const distZ = Math.abs(item.position.z - dongminGroup.position.z);
+          const distX = Math.abs(item.position.x - dongminGroup.position.x);
+
+          if (!item.collected && distZ < 1.4 && distX < 1.2) {
+            item.collected = true;
+            scene.remove(item);
+            items.splice(i, 1);
+            activateFlameBooster();
+            continue;
+          }
+
+          if (item.position.z > 25) {
+            scene.remove(item);
+            items.splice(i, 1);
+          }
+        }
+
+        // Obstacles Handling
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.position.z += gameSpeed * delta;
+
+          const distZ = Math.abs(obs.position.z - dongminGroup.position.z);
+          const distX = Math.abs(obs.position.x - dongminGroup.position.x);
+
+          if (!obs.collided && distZ < 1.15 && distX < 1.1) {
+            if (isInvincible) {
+              obs.collided = true;
+              soundSmash();
+              obs.position.y += 4;
+              obs.rotation.x += 3;
+            } else if (dongminGroup.position.y < 1.2) {
+              obs.collided = true;
+              takeHit();
+            }
+          }
+
+          if (obs.position.z > 25) {
+            scene.remove(obs);
+            obstacles.splice(i, 1);
+
+            const lastZ = obstacles.length > 0 ? obstacles[obstacles.length - 1].position.z : -30;
+            const density = Math.min(survivalTime * 0.35, 16);
+            const nextZ = Math.min(lastZ - (34 - density) - Math.random() * 18, -42);
+            spawnIrregularOwlRocks(nextZ);
+          }
+        }
+      }
+
+      // Camera Follow
+      const camConfig = cameraModes[camIndex];
+      const scaleMultiplier = isInvincible ? 1.35 : 1.0;
+      const targetPos = new THREE.Vector3().copy(dongminGroup.position).add(
+        new THREE.Vector3(camConfig.offset.x, camConfig.offset.y * scaleMultiplier, camConfig.offset.z * scaleMultiplier)
+      );
+      const lookPos = new THREE.Vector3().copy(dongminGroup.position).add(camConfig.lookAt);
+
+      camera.position.lerp(targetPos, 0.12);
+      camera.lookAt(lookPos);
+
+      renderer.render(scene, camera);
+
+      // Real-time Name Tags Update
+      updateNameTags();
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      init3D();
+      animate(performance.now());
+    });
+  </script>
+</body>
+</html>
